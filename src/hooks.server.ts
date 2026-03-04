@@ -38,7 +38,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 
 	if (!session) {
-		const isProtectedRoute = pathname.startsWith('/profile') || pathname.startsWith('/admin');
+		const isProtectedRoute = pathname.startsWith('/profile') || pathname.startsWith('/admin') || pathname.startsWith('/chat');
 		if (isProtectedRoute) {
 			const redirectTo = pathname + event.url.search;
 			return new Response(null, {
@@ -52,7 +52,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 	// Redirect unverified users away from protected routes
 	if (session && !session.user.emailVerified) {
-		const isProtectedRoute = pathname.startsWith('/profile') || pathname.startsWith('/admin');
+		const isProtectedRoute = pathname.startsWith('/profile') || pathname.startsWith('/admin') || pathname.startsWith('/chat');
 		const isExempt = pathname.startsWith('/verify-email') ||
 			pathname.startsWith('/login') ||
 			pathname.startsWith('/signup') ||

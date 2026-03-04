@@ -2,14 +2,23 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { account } from '$lib/server/db/auth.schema';
+import { eq, and } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
     if (!locals.user) {
         throw redirect(303, '/login');
     }
+
+    const [credentialAccount] = await db
+        .select({ id: account.id })
+        .from(account)
+        .where(and(eq(account.userId, locals.user.id), eq(account.providerId, 'credential')))
+        .limit(1);
+
     return {
-        user: locals.user
+        user: locals.user,
+        hasPassword: !!credentialAccount
     };
 };
 

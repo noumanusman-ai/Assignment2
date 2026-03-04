@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Navbar from '$lib/components/Navbar.svelte';
+
 	let { data } = $props();
 </script>
 
@@ -9,58 +11,7 @@
 <div
 	class="gradient-mesh relative flex min-h-screen flex-col overflow-x-hidden bg-background-light text-slate-900 antialiased dark:bg-background-dark dark:text-slate-100"
 >
-	<!-- Navigation -->
-	<header
-		class="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-background-light/80 px-6 py-4 backdrop-blur-md lg:px-20 dark:border-slate-800/50 dark:bg-background-dark/80"
-	>
-		<div class="group flex cursor-pointer items-center gap-2">
-			<div
-				class="flex size-10 items-center justify-center rounded-lg bg-primary shadow-lg shadow-primary/20"
-			>
-				<span class="material-symbols-outlined text-2xl text-white">fingerprint</span>
-			</div>
-			<h2 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">NexusID</h2>
-		</div>
-		<nav class="hidden items-center gap-10 md:flex">
-			<a
-				class="text-sm font-semibold text-slate-600 transition-colors hover:text-primary dark:text-slate-400 dark:hover:text-primary"
-				href="#">Features</a
-			>
-			<a
-				class="text-sm font-semibold text-slate-600 transition-colors hover:text-primary dark:text-slate-400 dark:hover:text-primary"
-				href="#">Documentation</a
-			>
-			<a
-				class="text-sm font-semibold text-slate-600 transition-colors hover:text-primary dark:text-slate-400 dark:hover:text-primary"
-				href="#">Enterprise</a
-			>
-			<a
-				class="text-sm font-semibold text-slate-600 transition-colors hover:text-primary dark:text-slate-400 dark:hover:text-primary"
-				href="#">Pricing</a
-			>
-		</nav>
-		<div class="flex items-center gap-4">
-			{#if !data.user}
-				<a
-					href="/login"
-					class="hidden items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95 sm:flex"
-				>
-					Get Started
-				</a>
-			{:else}
-				<a
-					href="/profile"
-					class="hidden items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95 sm:flex"
-				>
-					Dashboard
-				</a>
-				<div
-					class="size-10 rounded-full border-2 border-slate-200 bg-cover bg-center dark:border-slate-800"
-					style:background-image="url({data.user.image || `https://avatar.vercel.sh/${data.user.email}`})"
-				></div>
-			{/if}
-		</div>
-	</header>
+	<Navbar user={data.user} />
 
 	<main class="flex-1">
 		<!-- Hero Section -->

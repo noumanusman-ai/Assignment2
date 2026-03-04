@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { authClient } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import Navbar from '$lib/components/Navbar.svelte';
 
 	let { data, form } = $props();
 	let loading = $state(false);
@@ -20,11 +21,6 @@
 	let showDeleteConfirm = $state(false);
 	let deleteLoading = $state(false);
 	let deleteError = $state('');
-
-	async function logout() {
-		await authClient.signOut();
-		goto('/login');
-	}
 
 	async function updatePassword() {
 		passwordError = '';
@@ -78,39 +74,7 @@
 <div
 	class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display text-slate-900 dark:bg-background-dark dark:text-slate-100"
 >
-	<header
-		class="sticky top-0 z-50 flex items-center justify-between border-b border-solid border-slate-200 bg-white/5 px-6 py-4 whitespace-nowrap backdrop-blur-md md:px-10 dark:border-primary/20"
-	>
-		<a href="/" class="flex items-center gap-3">
-			<div class="flex size-8 items-center justify-center rounded-lg bg-primary text-white">
-				<span class="material-symbols-outlined text-2xl">fingerprint</span>
-			</div>
-			<h2 class="text-xl leading-tight font-bold tracking-tight text-slate-900 dark:text-white">
-				NexusID
-			</h2>
-		</a>
-		<div class="hidden flex-1 justify-center gap-8 md:flex">
-			<a
-				class="text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300 dark:hover:text-primary"
-				href="/">Home</a
-			>
-			<a class="border-b-2 border-primary pb-1 text-sm font-semibold text-primary" href="/profile"
-				>Profile</a
-			>
-		</div>
-		<div class="flex items-center gap-4">
-			<button
-				onclick={logout}
-				class="rounded-lg bg-slate-200 px-4 py-2 text-xs font-bold transition-all hover:bg-red-500 hover:text-white dark:bg-slate-800"
-			>
-				Logout
-			</button>
-			<div
-				class="aspect-square size-10 rounded-full border-2 border-primary/30 bg-cover bg-center bg-no-repeat"
-				style:background-image="url({data.user.image || `https://avatar.vercel.sh/${data.user.email}`})"
-			></div>
-		</div>
-	</header>
+	<Navbar user={data.user} />
 
 	<main class="flex flex-1 justify-center px-4 py-10 md:px-0">
 		<div class="flex max-w-[800px] flex-1 flex-col gap-8">
@@ -271,79 +235,94 @@
 						<span class="material-symbols-outlined text-primary">security</span>
 						<h2 class="text-xl font-bold text-slate-900 dark:text-white">Security</h2>
 					</div>
-					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-						<div class="col-span-1 flex flex-col gap-2 md:col-span-2">
-							<label
-								for="current-password"
-								class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-								>Current Password</label
-							>
-							<div class="relative">
+
+					{#if data.hasPassword}
+						<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+							<div class="col-span-1 flex flex-col gap-2 md:col-span-2">
+								<label
+									for="current-password"
+									class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+									>Current Password</label
+								>
+								<div class="relative">
+									<input
+										id="current-password"
+										bind:value={currentPassword}
+										class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-slate-900 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+										placeholder="••••••••"
+										type="password"
+									/>
+								</div>
+							</div>
+							<div class="flex flex-col gap-2">
+								<label
+									for="new-password"
+									class="text-sm font-semibold text-slate-700 dark:text-slate-300">New Password</label
+								>
 								<input
-									id="current-password"
-									bind:value={currentPassword}
-									class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-slate-900 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-									placeholder="••••••••"
+									id="new-password"
+									bind:value={newPassword}
+									class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+									placeholder="Minimum 8 chars"
+									type="password"
+								/>
+							</div>
+							<div class="flex flex-col gap-2">
+								<label
+									for="confirm-password"
+									class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+									>Confirm New Password</label
+								>
+								<input
+									id="confirm-password"
+									bind:value={confirmPassword}
+									class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+									placeholder="Repeat password"
 									type="password"
 								/>
 							</div>
 						</div>
-						<div class="flex flex-col gap-2">
-							<label
-								for="new-password"
-								class="text-sm font-semibold text-slate-700 dark:text-slate-300">New Password</label
+						{#if passwordError}
+							<p class="mt-4 text-sm font-medium text-red-500">{passwordError}</p>
+						{/if}
+						{#if passwordSuccess}
+							<p class="mt-4 text-sm font-medium text-green-500">Password updated successfully!</p>
+						{/if}
+						<div class="mt-8 flex justify-end gap-4">
+							<button
+								type="button"
+								onclick={() => { currentPassword = ''; newPassword = ''; confirmPassword = ''; passwordError = ''; passwordSuccess = false; }}
+								class="rounded-lg px-6 py-3 font-bold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
+								>Cancel</button
 							>
-							<input
-								id="new-password"
-								bind:value={newPassword}
-								class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-								placeholder="Minimum 8 chars"
-								type="password"
-							/>
-						</div>
-						<div class="flex flex-col gap-2">
-							<label
-								for="confirm-password"
-								class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-								>Confirm New Password</label
+							<button
+								type="button"
+								disabled={passwordLoading}
+								onclick={updatePassword}
+								class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/20 px-8 py-3 font-bold text-primary transition-all hover:bg-primary/30 disabled:opacity-50"
 							>
-							<input
-								id="confirm-password"
-								bind:value={confirmPassword}
-								class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 transition-all outline-none focus:border-transparent focus:ring-2 focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-								placeholder="Repeat password"
-								type="password"
-							/>
+								{#if passwordLoading}
+									<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"></path>
+									</svg>
+								{/if}
+								Update Password
+							</button>
 						</div>
-					</div>
-					{#if passwordError}
-						<p class="mt-4 text-sm font-medium text-red-500">{passwordError}</p>
+					{:else}
+						<div class="flex items-start gap-4 rounded-lg border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/50">
+							<span class="material-symbols-outlined text-xl text-primary">link</span>
+							<div>
+								<p class="text-sm font-semibold text-slate-900 dark:text-white">
+									Signed in with social provider
+								</p>
+								<p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+									Your account is linked to a social login provider. Password management is handled by your provider and is not available here.
+								</p>
+							</div>
+						</div>
 					{/if}
-					{#if passwordSuccess}
-						<p class="mt-4 text-sm font-medium text-green-500">Password updated successfully!</p>
-					{/if}
-					<div class="mt-8 flex justify-end gap-4">
-						<button
-							type="button"
-							onclick={() => { currentPassword = ''; newPassword = ''; confirmPassword = ''; passwordError = ''; passwordSuccess = false; }}
-							class="rounded-lg px-6 py-3 font-bold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
-							>Cancel</button
-						>
-						<button
-							type="button"
-							disabled={passwordLoading}
-							onclick={updatePassword}
-							class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/20 px-8 py-3 font-bold text-primary transition-all hover:bg-primary/30 disabled:opacity-50"
-						>
-							{#if passwordLoading}
-								<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-									<path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"></path>
-								</svg>
-							{/if}
-							Update Password
-						</button>
-					</div>
 				</section>
 
 				<!-- Danger Zone / Delete Account -->

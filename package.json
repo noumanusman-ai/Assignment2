@@ -19,7 +19,7 @@
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
 	},
 	"devDependencies": {
-		"@better-auth/cli": "^1.4.18",
+		"@better-auth/cli": "^1.4.21",
 		"@neondatabase/serverless": "^1.0.2",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/kit": "^2.50.2",
@@ -29,7 +29,7 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^24",
 		"@types/nodemailer": "^7.0.11",
-		"better-auth": "^1.4.18",
+		"better-auth": "^1.4.21",
 		"drizzle-kit": "^0.31.8",
 		"drizzle-orm": "^0.45.1",
 		"prettier": "^3.8.1",
@@ -45,6 +45,7 @@
 		"@ai-sdk/google": "^3.0.37",
 		"@ai-sdk/svelte": "^4.0.111",
 		"ai": "^6.0.111",
+		"marked": "^17.0.3",
 		"nodemailer": "^8.0.1"
 	}
 }

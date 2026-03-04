@@ -14,7 +14,8 @@
       "Bash(cat:*)",
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
-      "Bash(npm update:*)"
+      "Bash(npm update:*)",
+      "Bash(npm view:*)"
     ]
   }
 }

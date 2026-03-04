@@ -12,14 +12,6 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 
 	if (session) {
-		event.locals.session = session.session;
-		event.locals.user = session.user;
-	}
-
-	const pathname = event.url.pathname;
-
-	// Admin role check
-	if (session && pathname.startsWith('/admin')) {
 		const { db } = await import('$lib/server/db');
 		const { user: userTable } = await import('$lib/server/db/auth.schema');
 		const { eq } = await import('drizzle-orm');
@@ -29,7 +21,15 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 			.where(eq(userTable.id, session.user.id))
 			.limit(1);
 
-		if (!dbUser || dbUser.role !== 'admin') {
+		event.locals.session = session.session;
+		event.locals.user = { ...session.user, role: dbUser?.role ?? 'user' };
+	}
+
+	const pathname = event.url.pathname;
+
+	// Admin role check
+	if (session && pathname.startsWith('/admin')) {
+		if (event.locals.user?.role !== 'admin') {
 			return new Response(null, {
 				status: 303,
 				headers: { location: '/profile' }

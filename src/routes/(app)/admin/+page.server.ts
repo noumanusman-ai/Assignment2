@@ -43,13 +43,34 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const whereClause = and(...conditions);
 
-	const users = await db
+	const usersRaw = await db
 		.select()
 		.from(user)
 		.where(whereClause)
 		.orderBy(desc(user.createdAt))
 		.limit(PAGE_SIZE)
 		.offset((currentPage - 1) * PAGE_SIZE);
+
+	// Fetch providers for each user
+	const userIds = usersRaw.map((u) => u.id);
+	const accounts = userIds.length
+		? await db
+				.select({ userId: account.userId, providerId: account.providerId })
+				.from(account)
+				.where(or(...userIds.map((id) => eq(account.userId, id)))!)
+		: [];
+
+	const providerMap = new Map<string, string[]>();
+	for (const acc of accounts) {
+		const list = providerMap.get(acc.userId) ?? [];
+		list.push(acc.providerId);
+		providerMap.set(acc.userId, list);
+	}
+
+	const users = usersRaw.map((u) => ({
+		...u,
+		providers: providerMap.get(u.id) ?? []
+	}));
 
 	const [{ total }] = await db.select({ total: count() }).from(user).where(whereClause);
 

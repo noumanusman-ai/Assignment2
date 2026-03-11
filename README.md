@@ -86,7 +86,7 @@ NexusID/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/NexusID.git
+git clone https://github.com/noumanusman-ai/Assignment2.git
 cd NexusID
 ```
 

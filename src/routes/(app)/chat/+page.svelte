@@ -2,23 +2,111 @@
 	import { Chat } from '@ai-sdk/svelte';
 	import ChatWindow from '$lib/components/chat/ChatWindow.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
+	import { browser } from '$app/environment';
 
 	let { data } = $props();
 
-	const chat = new Chat({});
-
+	let chat = new Chat({});
 	let input = $state('');
+	let conversationId = $state(data.activeConversation?.id || '');
 
-	function handleSubmit() {
+	// Load conversation ID from localStorage on mount
+	$effect(() => {
+		if (browser) {
+			const saved = localStorage.getItem('currentConversationId');
+			if (saved && !conversationId) {
+				conversationId = saved;
+			}
+		}
+	});
+
+	async function handleSubmit() {
 		if (!input.trim()) return;
 		const text = input;
 		input = '';
-		chat.sendMessage({ text });
+
+		try {
+			// Ensure we have a conversation ID
+			if (!conversationId) {
+				const response = await fetch('/api/conversations/get-or-create', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' }
+				});
+				const result = await response.json();
+				if (result.id) {
+					conversationId = result.id;
+					if (browser) {
+						localStorage.setItem('currentConversationId', result.id);
+					}
+					console.log('Conversation ID set:', conversationId);
+				}
+			}
+
+			// Create a wrapper around fetch for this specific call
+			const originalFetch = globalThis.fetch;
+			let fetchUsed = false;
+
+			(globalThis as any).fetch = async (input: any, init?: any) => {
+				// Add conversationId to chat API calls
+				if (typeof input === 'string' && input.includes('/api/chat') && !fetchUsed) {
+					fetchUsed = true;
+					console.log('Intercepting /api/chat request, adding conversationId:', conversationId);
+					try {
+						const body = init?.body ? JSON.parse(init.body as string) : {};
+						body.conversationId = conversationId;
+						init = { ...init, body: JSON.stringify(body) };
+						console.log('Modified request body:', body);
+					} catch (e) {
+						console.error('Error modifying request:', e);
+					}
+				}
+				return originalFetch(input, init);
+			};
+
+			console.log('Sending message:', text);
+			// Send the message
+			await chat.sendMessage({ text });
+
+			// Restore original fetch after a short delay to ensure it completes
+			setTimeout(() => {
+				(globalThis as any).fetch = originalFetch;
+			}, 100);
+		} catch (error) {
+			console.error('Error sending message:', error);
+		}
 	}
 
 	function handleClear() {
 		chat.messages = [];
+		conversationId = '';
+		if (browser) {
+			localStorage.removeItem('currentConversationId');
+		}
 	}
+
+	async function loadConversationMessages() {
+		if (!conversationId) return;
+
+		try {
+			const response = await fetch(`/api/chat/messages?conversationId=${conversationId}`);
+			const data = await response.json();
+
+			if (data.messages) {
+				chat.messages = data.messages.map((msg: any) => ({
+					role: msg.role,
+					content: msg.content
+				}));
+			}
+		} catch (error) {
+			console.error('Failed to load messages:', error);
+		}
+	}
+
+	$effect.pre(() => {
+		if (conversationId && conversationId !== data.activeConversation?.id) {
+			loadConversationMessages();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -48,7 +136,7 @@
 			<div class="flex items-center gap-2">
 				<div class="size-2 bg-primary rounded-full"></div>
 				<span class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
-					>Svelte 5 Engine Ready</span
+					>Langchain + Memory</span
 				>
 			</div>
 			<div class="flex items-center gap-2">
@@ -60,7 +148,7 @@
 			<div class="flex items-center gap-2">
 				<div class="size-2 bg-slate-400 rounded-full"></div>
 				<span class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
-					>v2.4.0-prod</span
+					>v2.5.0-prod</span
 				>
 			</div>
 		</div>

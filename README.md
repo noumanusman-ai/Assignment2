@@ -12,7 +12,7 @@ A modern, full-stack identity and access management platform with AI-powered cha
 | Auth           | [Better Auth](https://better-auth.com/) (email + GitHub + Google OAuth) |
 | Database       | PostgreSQL via [Neon](https://neon.tech/) serverless driver   |
 | ORM            | [Drizzle ORM](https://orm.drizzle.team/)                     |
-| AI             | [Vercel AI SDK](https://sdk.vercel.ai/) + Google Gemini      |
+| AI             | [Vercel AI SDK](https://sdk.vercel.ai/) + [Langchain](https://js.langchain.com/) + Google Gemini      |
 | Email          | [Nodemailer](https://nodemailer.com/) (Gmail SMTP)           |
 | Package Manager| pnpm (recommended) / npm / yarn                              |
 
@@ -23,6 +23,9 @@ A modern, full-stack identity and access management platform with AI-powered cha
 - **Role-Based Access** — Admin and user roles with middleware-level enforcement
 - **Admin Dashboard** — User management (create, ban, suspend, delete), statistics, search/filter
 - **AI Chat** — Streaming chat interface powered by Google Gemini via Vercel AI SDK
+- **Persistent Memory** — Langchain-powered conversation memory with automatic context preservation
+- **Conversation Management** — Create, retrieve, and manage multiple chat sessions per user
+- **In-Context Learning** — AI remembers previous messages and maintains conversation history
 - **Profile Management** — Update name, email, avatar, change password, delete account
 - **Responsive UI** — Dark-mode-ready design with glass-morphism cards and gradient backgrounds
 
@@ -42,13 +45,18 @@ NexusID/
 │   │   │   ├── forgot-password/
 │   │   │   ├── reset-password/
 │   │   │   └── verify-email/
-│   │   ├── api/chat/              # Streaming chat API endpoint
+│   │   ├── api/
+│   │   │   ├── chat/              # Streaming chat API with Langchain memory
+│   │   │   ├── chat/messages/     # Fetch conversation history
+│   │   │   └── conversations/     # Conversation management endpoints
 │   │   └── +layout.svelte         # Root layout
 │   ├── lib/
 │   │   ├── server/
 │   │   │   ├── auth.ts            # Better Auth config (OAuth, email, plugins)
-│   │   │   └── db/
-│   │   │       ├── schema.ts      # Drizzle schema (user, session, account, verification)
+	│   │   │   ├── chat-service.ts    # Database operations for conversations & messages
+	│   │   │   ├── langchain-chain.ts # Langchain chain setup with memory management
+	│   │   │   └── db/
+	│   │   │       ├── schema.ts      # Drizzle schema (users, conversations, messages)
 │   │   │       ├── auth.schema.ts # Auto-generated Better Auth schema
 │   │   │       └── index.ts       # Neon database client
 │   │   ├── components/            # Shared Svelte components (Navbar, Chat)
@@ -158,6 +166,14 @@ pnpm auth:schema
 npm run auth:schema
 ```
 
+This will create all tables including:
+- `user` — User accounts with profiles
+- `session` — Authentication sessions
+- `account` — OAuth provider accounts
+- `verification` — Email verification tokens
+- `conversations` — Chat session metadata (NEW)
+- `messages` — Chat message history with Langchain memory (NEW)
+
 ### 5. Start the development server
 
 ```bash
@@ -200,16 +216,25 @@ The app will be running at **http://localhost:5173**.
 │ banned       │     │ updatedAt    │     │ updatedAt    │
 │ bannedReason │     └──────────────┘     └──────────────┘
 │ createdAt    │
-│ updatedAt    │     ┌──────────────┐
-└──────────────┘     │ verification │
-                     ├──────────────┤
-                     │ id (PK)      │
-                     │ identifier   │
-                     │ value        │
-                     │ expiresAt    │
-                     │ createdAt    │
-                     │ updatedAt    │
-                     └──────────────┘
+│ updatedAt    │     ┌──────────────┐     ┌──────────────┐
+└──────────────┘     │ verification │     │conversation  │
+                     ├──────────────┤     ├──────────────┤
+                     │ id (PK)      │     │ id (PK)      │
+                     │ identifier   │     │ userId (FK)──►│ user.id │
+                     │ value        │     │ title        │
+                     │ expiresAt    │     │ createdAt    │
+                     │ createdAt    │     │ updatedAt    │
+                     │ updatedAt    │     └──────────────┘
+                     └──────────────┘     
+                                          ┌──────────────┐
+                                          │   messages   │
+                                          ├──────────────┤
+                                          │ id (PK)      │
+                                          │ conversationId(FK)──►│ conversation.id │
+                                          │ role         │  ('user'|'assistant')
+                                          │ content      │
+                                          │ createdAt    │
+                                          └──────────────┘
 ```
 
 ## OAuth Setup Guide
@@ -319,6 +344,35 @@ vercel env add GOOGLE_GENERATIVE_AI_API_KEY
 vercel --prod
 ```
 
+## Langchain Memory System
+
+The chat system uses Langchain with persistent conversation memory:
+
+### How It Works
+
+1. **Conversation Creation** — Each chat session gets a unique ID stored in the database
+2. **Message Storage** — All user and assistant messages are saved to `messages` table
+3. **Context Loading** — On each new message, previous messages are retrieved and included
+4. **Langchain Integration** — Messages are formatted for Langchain's `ConversationChain`
+5. **Streaming Response** — AI response streams to client while being stored in database
+
+### Memory Strategies
+
+Three memory types are available (configured in `src/lib/server/langchain-chain.ts`):
+
+- **Buffer** (default) — Keeps full conversation history
+- **Window** — Maintains only last 10 messages (efficient)
+- **Summary** — Summarizes old messages (best for long conversations)
+
+### API Endpoints
+
+```
+POST   /api/chat                          # Send message with memory context
+GET    /api/chat/messages?conversationId  # Fetch conversation history
+POST   /api/conversations/get-or-create   # Get or create conversation
+GET    /api/conversations/latest          # Fetch latest conversation
+```
+
 ## Troubleshooting
 
 | Issue                              | Solution                                                             |
@@ -330,6 +384,9 @@ vercel --prod
 | Auth schema out of sync            | Run `pnpm auth:schema` then `pnpm db:push`                          |
 | Vercel build fails                 | Check all env variables are set in Vercel dashboard                  |
 | Chat not working                   | Verify `GOOGLE_GENERATIVE_AI_API_KEY` is valid and has quota         |
+| AI not remembering previous messages | Ensure `conversationId` is being passed in chat requests; check localStorage for persistence |
+| Conversation history not loading   | Verify `conversations` and `messages` tables exist; check user auth context |
+| Memory context missing             | Check that database messages are being retrieved; review logs via `pnpm db:studio` |
 
 ## License
 
